@@ -270,13 +270,14 @@ function makeICS(appt){
 }
 function downloadICS(appt){
   const ics = makeICS(appt);
-  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const blob = new Blob([ics], {type:'text/calendar'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'termin.ics';
+  a.href = url; a.target = '_blank'; a.rel = 'noopener';
   document.body.appendChild(a); a.click();
-  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
-  toast('Otvara se u Kalendaru...');
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  toast('Otvara se ekran za dodavanje u Kalendar — potvrdi s "Add"');
 }
 
 /* ===================== RENDER: ROUTER ===================== */
