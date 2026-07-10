@@ -228,7 +228,7 @@ const MONTHS = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','s
 function fmtDateLabel(d){
   return `${DAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
 }
-function toISODate(d){ return d.toISOString().slice(0,10); }
+function toISODate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function euro(n){ return (Math.round(n*100)/100).toFixed(2).replace('.',',') + ' €'; }
 function pad(n){ return n.toString().padStart(2,'0'); }
 function toast(msg){
@@ -650,8 +650,8 @@ function renderPregled(){
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const done = DB.appointments.filter(a=>a.status!=='otkazano');
   const sum = (arr)=>arr.reduce((s,a)=>s+a.price,0);
-  const weekAppts = done.filter(a=>new Date(a.date)>=startOfWeek);
-  const monthAppts = done.filter(a=>new Date(a.date)>=startOfMonth);
+  const weekAppts = done.filter(a=>new Date(a.date+'T00:00:00')>=startOfWeek);
+  const monthAppts = done.filter(a=>new Date(a.date+'T00:00:00')>=startOfMonth);
 
   // per weekday totals for this week
   const weekdayTotals = [0,0,0,0,0,0,0]; // mon..sun index 0..6
