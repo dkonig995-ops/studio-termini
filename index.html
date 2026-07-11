@@ -285,14 +285,11 @@ function makeICS(appt){
   ].join('\r\n');
   return ics;
 }
+function icsDataUri(appt){
+  return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(makeICS(appt));
+}
 function downloadICS(appt){
-  const ics = makeICS(appt);
-  const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-  const a = document.createElement('a');
-  a.href = dataUri; a.target = '_blank'; a.rel = 'noopener';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  toast('Otvara se ekran za dodavanje u Kalendar — potvrdi s "Add"');
+  window.location.href = icsDataUri(appt);
 }
 
 /* ===================== RENDER: ROUTER ===================== */
@@ -355,7 +352,7 @@ function openApptDetail(id){
     <h2>${c?c.name:''} <button onclick="closeSheet()">✕</button></h2>
     <div class="helper" style="margin-top:-8px; margin-bottom:14px;">${a.date.split('-').reverse().join('.')} u ${a.time}h · ${s?s.name:''}</div>
     <div class="row2">
-      <button class="btn primary" style="margin-top:0;" onclick="downloadICS(${JSON.stringify(a).replace(/"/g,'&quot;')})">📅 Dodaj u Kalendar</button>
+      <a class="btn primary" style="margin-top:0; display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsDataUri(a)}" target="_blank" rel="noopener">📅 Dodaj u Kalendar</a>
     </div>
     <label>Bilješka</label>
     <textarea id="apptNote" oninput="a_${a.id}_note=this.value">${a.note||''}</textarea>
@@ -464,10 +461,14 @@ function saveNewAppt(){
   closeSheet();
   currentDay = new Date(date+'T00:00:00');
   render();
-  toast('Termin spremljen');
   setTimeout(()=>{
-    if(confirm('Dodati termin u Apple Kalendar s podsjetnikom 30 min prije?')) downloadICS(appt);
-  }, 300);
+    showSheet(`
+      <h2>Termin spremljen ✓ <button onclick="closeSheet()">✕</button></h2>
+      <p class="helper" style="margin-bottom:16px;">Dodaj termin u Apple Kalendar da dobiješ podsjetnik 30 min prije.</p>
+      <a class="btn primary" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsDataUri(appt)}" target="_blank" rel="noopener" onclick="setTimeout(closeSheet,300)">📅 Dodaj u Kalendar</a>
+      <button class="btn secondary" onclick="closeSheet()">Ne sada</button>
+    `);
+  }, 250);
 }
 
 /* ===================== TAB: KLIJENTI ===================== */
