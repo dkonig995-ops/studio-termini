@@ -88,10 +88,13 @@
     background:var(--card); border-radius:16px; padding:14px 15px; margin-bottom:10px;
     box-shadow:var(--shadow); border-left:4px solid var(--rose);
   }
-  .card.pedi{ border-left-color:var(--gold); }
-  .card.other{ border-left-color:var(--sage); }
-  .card.cancelled{ opacity:.5; border-left-color:#ccc; }
-  .card.done{ border-left-color:var(--sage); }
+  .card.status-done{ border-left-color:var(--sage); background:#F4F8F1; }
+  .card.status-cancelled{ border-left-color:var(--red); background:#FDF3F2; opacity:.8; }
+  .card.status-cancelled .client-name{ text-decoration:line-through; color:var(--plum-soft); }
+  .cat-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .cat-dot.mani{ background:var(--rose); }
+  .cat-dot.pedi{ background:var(--gold); }
+  .cat-dot.other{ background:var(--sage); }
   .card .row1{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
   .card .time{ font-family:'IBM Plex Mono'; font-weight:600; font-size:15px; color:var(--plum); white-space:nowrap;}
   .card .client-name{ font-weight:700; font-size:15.5px; margin:2px 0 2px; }
@@ -238,6 +241,20 @@ function toast(msg){
 function clientById(id){ return DB.clients.find(c=>c.id===id); }
 function serviceById(id){ return DB.services.find(s=>s.id===id); }
 function itemById(id){ return DB.inventory.find(i=>i.id===id); }
+function findOverlap(date, time, duration, excludeId){
+  const [h,m] = time.split(':').map(Number);
+  const startMin = h*60+m;
+  const endMin = startMin + (duration||30);
+  return DB.appointments.find(a=>{
+    if(a.id===excludeId) return false;
+    if(a.date!==date) return false;
+    if(a.status==='otkazano') return false;
+    const [ah,am] = a.time.split(':').map(Number);
+    const aStart = ah*60+am;
+    const aEnd = aStart + (a.duration||30);
+    return startMin < aEnd && endMin > aStart;
+  });
+}
 
 let currentDay = new Date(); currentDay.setHours(0,0,0,0);
 let activeTab = 'termini';
@@ -310,20 +327,19 @@ function renderTermini(){
   } else {
     dayAppts.forEach(a=>{
       const c = clientById(a.clientId); const s = serviceById(a.serviceId);
-      const catClass = s? (s.cat==='pedi'?'pedi':s.cat==='other'?'other':'') : '';
-      const cancelled = a.status==='otkazano';
-      const done = a.status==='odrađeno';
-      html += `<div class="card ${catClass} ${cancelled?'cancelled':''} ${done?'done':''}" onclick="openApptDetail('${a.id}')">
+      const statusClass = a.status==='odrađeno' ? 'status-done' : a.status==='otkazano' ? 'status-cancelled' : 'status-scheduled';
+      const catDot = s ? `<span class="cat-dot ${s.cat}"></span>` : '';
+      html += `<div class="card ${statusClass}" onclick="openApptDetail('${a.id}')">
         <div class="row1">
           <div>
             <div class="time">${a.time}</div>
             <div class="client-name">${c?c.name:'(klijentica obrisana)'}</div>
-            <div class="svc">${s?s.name:''}</div>
+            <div class="svc">${catDot}${s?s.name:''}</div>
           </div>
           <div class="price">${euro(a.price)}</div>
         </div>
         <div class="tags">
-          ${cancelled?'<span class="chip danger">Otkazano</span>':done?'<span class="chip ghost">Odrađeno</span>':'<span class="chip">Zakazano</span>'}
+          ${a.status==='otkazano'?'<span class="chip danger">Otkazano</span>':a.status==='odrađeno'?'<span class="chip ghost">Odrađeno</span>':'<span class="chip">Zakazano</span>'}
           ${a.duration?`<span class="chip ghost">${a.duration} min</span>`:''}
         </div>
       </div>`;
@@ -425,13 +441,22 @@ function saveNewAppt(){
   if(clientId==='__new__'){
     const name = document.getElementById('na_newClientName').value.trim();
     if(!name){ toast('Upiši ime klijentice'); return; }
+  } else if(!clientId){ toast('Odaberi klijenticu'); return; }
+  const duration = parseInt(document.getElementById('na_dur').value)||45;
+  const overlap = findOverlap(date, time, duration, null);
+  if(overlap){
+    const oc = clientById(overlap.clientId);
+    const proceed = confirm(`⚠️ Preklapanje: ${oc?oc.name:'klijentica'} već ima termin u ${overlap.time}h. Spremiti ovaj termin ipak?`);
+    if(!proceed) return;
+  }
+  if(clientId==='__new__'){
+    const name = document.getElementById('na_newClientName').value.trim();
     const nc = {id:uid(), name, phone:document.getElementById('na_newClientPhone').value.trim(), notes:'', createdAt:Date.now()};
     DB.clients.push(nc); clientId = nc.id;
   }
-  if(!clientId){ toast('Odaberi klijenticu'); return; }
   const appt = {
     id: uid(), clientId, serviceId, date, time,
-    duration: parseInt(document.getElementById('na_dur').value)||45,
+    duration,
     price: parseFloat(document.getElementById('na_price').value)||0,
     note: document.getElementById('na_note').value,
     status: 'zakazano'
