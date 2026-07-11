@@ -225,6 +225,17 @@ function seedData(){
 }
 let DB = loadDB();
 
+/* If we were opened via the calendar-redirect link (?addcal=...), immediately
+   navigate to the data: URI in this same tab — this only works reliably when
+   running inside real Safari (which is why we route through a real https link first). */
+(function checkCalRedirect(){
+  const params = new URLSearchParams(window.location.search);
+  const addcal = params.get('addcal');
+  if(addcal){
+    window.location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(addcal);
+  }
+})();
+
 /* ===================== HELPERS ===================== */
 const DAYS = ['nedjelja','ponedjeljak','utorak','srijeda','četvrtak','petak','subota'];
 const MONTHS = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenoga','prosinca'];
@@ -287,6 +298,9 @@ function makeICS(appt){
 }
 function icsDataUri(appt){
   return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(makeICS(appt));
+}
+function icsCalLink(appt){
+  return 'x-safari-' + location.origin + location.pathname + '?addcal=' + encodeURIComponent(makeICS(appt));
 }
 function downloadICS(appt){
   window.location.href = icsDataUri(appt);
@@ -352,7 +366,7 @@ function openApptDetail(id){
     <h2>${c?c.name:''} <button onclick="closeSheet()">✕</button></h2>
     <div class="helper" style="margin-top:-8px; margin-bottom:14px;">${a.date.split('-').reverse().join('.')} u ${a.time}h · ${s?s.name:''}</div>
     <div class="row2">
-      <a class="btn primary" style="margin-top:0; display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsDataUri(a)}" target="_blank" rel="noopener">📅 Dodaj u Kalendar</a>
+      <a class="btn primary" style="margin-top:0; display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsCalLink(a)}" target="_blank" rel="noopener">📅 Dodaj u Kalendar</a>
     </div>
     <label>Bilješka</label>
     <textarea id="apptNote" oninput="a_${a.id}_note=this.value">${a.note||''}</textarea>
@@ -465,7 +479,7 @@ function saveNewAppt(){
     showSheet(`
       <h2>Termin spremljen ✓ <button onclick="closeSheet()">✕</button></h2>
       <p class="helper" style="margin-bottom:16px;">Dodaj termin u Apple Kalendar da dobiješ podsjetnik 30 min prije.</p>
-      <a class="btn primary" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsDataUri(appt)}" target="_blank" rel="noopener" onclick="setTimeout(closeSheet,300)">📅 Dodaj u Kalendar</a>
+      <a class="btn primary" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box;" href="${icsCalLink(appt)}" target="_blank" rel="noopener" onclick="setTimeout(closeSheet,300)">📅 Dodaj u Kalendar</a>
       <button class="btn secondary" onclick="closeSheet()">Ne sada</button>
     `);
   }, 250);
