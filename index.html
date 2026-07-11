@@ -289,11 +289,8 @@ function downloadICS(appt){
   const ics = makeICS(appt);
   const blob = new Blob([ics], {type:'text/calendar'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.target = '_blank'; a.rel = 'noopener';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  window.location.href = url;
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
   toast('Otvara se ekran za dodavanje u Kalendar — potvrdi s "Add"');
 }
 
